@@ -4,7 +4,8 @@ import json
 class Brain:
 
     model = []
-    
+
+    @staticmethod
     def normalizePoints(positions):
 
         if not positions:
@@ -36,7 +37,8 @@ class Brain:
 
         
         return positions
-    
+
+    @staticmethod
     def genNormalMatrix(normal_positions):
         matrix = []
         res = 12
@@ -66,7 +68,8 @@ class Brain:
         #print(matrix) 
 
         return matrix
-        
+
+    @staticmethod
     def flattenMatrix(matrix):
         flatVector = []
 
@@ -79,6 +82,7 @@ class Brain:
 
         return (flatVector)
 
+    @staticmethod
     #Method to visualize the matrix in console
     def visualizeMatrix(matrix):
         visualization = ""
@@ -86,7 +90,7 @@ class Brain:
             visualization += " ".join(str(cell) for cell in row) + "\n"
 
         print(visualization)
-        
+
     @staticmethod
     def manhattanDistance(vector1, vector2):
         total_sum = 0
@@ -97,6 +101,7 @@ class Brain:
         print(total_sum)
         return total_sum
 
+    @staticmethod
     def predictObject(predict_vector):
         match = None
         current_min_dist = 1000
@@ -114,6 +119,7 @@ class Brain:
 
         print("You Drew: ", match)
 
+    @staticmethod
     def packBrainModel(file_path):
         with open(file_path, "r") as file:
             raw_model = json.load(file)

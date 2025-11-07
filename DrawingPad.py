@@ -6,7 +6,7 @@ class DrawingPad:
         self.canvas = tk.Canvas(tk_app, width=500, height=500, bg="black")
         self.canvas.pack()
         self.canvas.bind("<B1-Motion>", self.draw)
-        self.canvas.bind("<ButtonRelease-1>", self.clear_canvas)
+        self.canvas.bind("<ButtonPress-3>", self.clear_canvas)
         self.positions = []
 
     def draw(self, event):
