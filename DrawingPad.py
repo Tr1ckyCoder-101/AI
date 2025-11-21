@@ -13,7 +13,7 @@ class DrawingPad:
         x = event.x
         y = event.y
         self.positions.append([x, y])
-        radius = 7
+        radius = 12
         self.canvas.create_oval(x-radius, y-radius, x+radius, y+radius, fill="white")
     
     def clear_canvas(self, event):

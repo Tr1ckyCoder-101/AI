@@ -53,8 +53,8 @@ class Brain:
 
 
         for point in normal_positions:
-            x = int(point[0] * res)
-            y = int(point[1] * res)
+            x = min(int(point[0] * res), res - 1)
+            y = min(int(point[1] * res), res - 1)
 
             if x >= res:
                 x = res - 1
