@@ -1,126 +1,136 @@
 import math
 import json
 
+
 class Brain:
-
-    model = []
+    # model: {label: [float, float, ...]}
+    model = {}
 
     @staticmethod
-    def normalizePoints(positions):
-
-        if not positions:
+    def normalizePoints(points):
+        if not points:
             return []
-
-        maxX = max(points[0] for points in positions)
-        maxY = max(points[1] for points in positions)
-        minX = min(points[0] for points in positions)
-        minY = min(points[1] for points in positions)
-
-        rangeX = maxX - minX
-        rangeY = maxY - minY
-
-        if rangeX == 0:
-            rangeX = 1
-
-        if rangeY == 0:
-            rangeY = 1
-
-        for points in positions:
-            
-            # Shifting the points to the origin
-            points[0] -= minX
-            points[1] -= minY
-
-            # Scaling the Points
-            points[0]/= rangeX
-            points[1]/= rangeY
-
-        
-        return positions
+        xs = [p[0] for p in points]
+        ys = [p[1] for p in points]
+        minX, maxX = min(xs), max(xs)
+        minY, maxY = min(ys), max(ys)
+        rangeX = maxX - minX or 1
+        rangeY = maxY - minY or 1
+        # Return a new list, do not modify in-place
+        return [[(p[0] - minX) / rangeX, (p[1] - minY) / rangeY] for p in points]
 
     @staticmethod
-    def genNormalMatrix(normal_positions):
-        matrix = []
-        res = 12
-
-        for i in range(res):
-            row = []
-
-            for j in range(res):
-                row.append("0")
-            
-            matrix.append(row)
-
-
-        for point in normal_positions:
+    def genNormalMatrix(normalizedPoints):
+        res = 10  # Match MLDrawingPad
+        matrix = [[0 for _ in range(res)] for _ in range(res)]
+        for point in normalizedPoints:
             x = int(point[0] * res)
             y = int(point[1] * res)
-
             if x >= res:
                 x = res - 1
             if y >= res:
                 y = res - 1
-            matrix[y][x] = "1"
-            #matrix[y][x] +=
-        
-        #print(normal_positions)
-            
-        #print(matrix) 
-
+            matrix[y][x] += 1  # Increment instead of set
+        # Normalize matrix to [0,1] range
+        max_val = max(max(row) for row in matrix) or 1
+        for y in range(res):
+            for x in range(res):
+                matrix[y][x] = matrix[y][x] / max_val
         return matrix
 
     @staticmethod
     def flattenMatrix(matrix):
         flatVector = []
-
         for row in matrix:
             for cell in row:
                 flatVector.append(cell)
+        return flatVector
 
-        for i in range(len(flatVector)):
-            flatVector[i] = int(flatVector[i])
-
-        return (flatVector)
-
-    @staticmethod
-    #Method to visualize the matrix in console
-    def visualizeMatrix(matrix):
-        visualization = ""
-        for row in matrix:
-            visualization += " ".join(str(cell) for cell in row) + "\n"
-
-        print(visualization)
+    # visualizeMatrix method removed for cleaner output
+    # (If needed, you can uncomment and use the following for debugging:)
+    # @staticmethod
+    # def visualizeMatrix(matrix):
+    #     visualization = ""
+    #     for row in matrix:
+    #         visualization += " ".join(str(cell) for cell in row) + "\n"
+    #     print(visualization)
 
     @staticmethod
     def manhattanDistance(vector1, vector2):
         total_sum = 0
-
         for i in range(len(vector1)):
             total_sum += abs(vector1[i] - vector2[i])
-
-        print(total_sum)
         return total_sum
 
     @staticmethod
+    def euclideanDist(vec1, vec2):
+        dist = 0
+        for i in range(len(vec1)):
+            diff = vec1[i] - vec2[i]
+            dist += diff * diff
+        return math.sqrt(dist)
+
+    @staticmethod
+    def hammingDist(vec1, vec2):
+        # Count the number of differing bits
+        return sum(a != b for a, b in zip(vec1, vec2))
+
+    @staticmethod
     def predictObject(predict_vector):
-        match = None
-        current_min_dist = 1000
+        bestMatch = None
+        lowestDistance = float('inf')
+        print("[DEBUG] Input vector length:", len(predict_vector))
+        for label, modelVector in Brain.model.items():
+            if not isinstance(modelVector, list):
+                continue
+            if len(modelVector) != len(predict_vector):
+                print(f"[DEBUG] Skipping '{label}' due to length mismatch.")
+                continue
+            distance = Brain.euclideanDist(modelVector, predict_vector)
+            print(f"[DEBUG] Euclidean distance to '{label}': {distance}")
+            if bestMatch is None or distance < lowestDistance:
+                lowestDistance = distance
+                bestMatch = label
+        if bestMatch is not None:
+            print(f"[DEBUG] Closest match: {bestMatch} (Euclidean distance {lowestDistance})")
+            return bestMatch
+        print("[DEBUG] No match found. Returning 'unknown'.")
+        return "unknown"
 
-        for label, input_vector in Brain.model:
-            print(label, input_vector, predict_vector)
-
-            prediction_diff = Brain.manhattanDistance(input_vector, predict_vector)
-            if prediction_diff < current_min_dist:
-                current_min_dist = prediction_diff
-                match = label
-
-        print(predict_vector)
-        print(current_min_dist)
-
-        print("You Drew: ", match)
+    @staticmethod
+    def trainModel(label, vector, learningRate=0.05):
+        # In-place learning rate update (like MLDrawingPad)
+        vector = [float(x) for x in vector]
+        if label not in Brain.model or not isinstance(Brain.model[label], list) or len(Brain.model[label]) != len(vector):
+            Brain.model[label] = vector[:]
+        else:
+            model_vec = Brain.model[label]
+            for i in range(len(model_vec)):
+                diff = vector[i] - model_vec[i]
+                model_vec[i] += learningRate * diff
 
     @staticmethod
     def packBrainModel(file_path):
-        with open(file_path, "r") as file:
-            raw_model = json.load(file)
-            Brain.model = [(label, vector) for label, vector in raw_model.items()]
+        try:
+            print(f"[DEBUG] Attempting to load model from: {file_path}")
+            with open(file_path, "r") as file:
+                loaded = json.load(file)
+                # Convert all values to float lists
+                for k, v in loaded.items():
+                    if isinstance(v, list):
+                        loaded[k] = [float(x) for x in v]
+                Brain.model = loaded
+            print("[DEBUG] Model loaded. Keys:", list(Brain.model.keys()))
+        except Exception as e:
+            Brain.model = {}
+            print(f"[DEBUG] Model load failed: {e}. Initialized empty model.")
+
+    @staticmethod
+    def saveModel(file_path):
+        try:
+            # Save as single vector for each label
+            with open(file_path, "w") as file:
+                json.dump(Brain.model, file)
+            print(f"[DEBUG] Model saved to: {file_path}")
+        except Exception as e:
+            print(f"[DEBUG] Model save failed: {e}")
